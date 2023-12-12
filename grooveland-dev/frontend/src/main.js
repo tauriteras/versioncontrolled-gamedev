@@ -24,6 +24,7 @@ let Game = {
 	socket: io('http://localhost:3000'),
 	scene: scene,
 	clock: new THREE.Clock(),
+	delta: 0,
 
 	run: mainLoop
 }
@@ -49,6 +50,8 @@ function mainLoop() {
 	}
 
 	Game.socket.emit('player-movement', Player.position.x, Player.position.y);
+
+	Game.delta = Game.clock.getDelta();
 
 	Camera.update();
 
