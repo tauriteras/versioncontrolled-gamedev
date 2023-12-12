@@ -1,26 +1,39 @@
 import * as THREE from 'three';
 
-import { scene } from './main.js';
-
-import Player from './player.js';
+import Player from './Player.js';
+import Game from './main.js';
 
 let vectorDown = new THREE.Vector3(0, 0, 1);
 let origin = new THREE.Vector3(0, 0, 0);
 
+let PhysicsEngine = {
+    update: physicsEngine,
+    bottomCollision: checkBottomCollision,
+    topCollisions: checkTopCollisions,
+    leftCollisions: checkLeftCollisions,
+    rightCollisions: checkRightCollisions
+}
 
-export default function physicsEngine() {
+function physicsEngine() {
 
     // Gravity
+    // TODO: Speed up gravity when falling
     if (Player.isMovingUp === false && !checkBottomCollision()) {
-        Player.position.y -= 5;
+        Player.position.y -= 1.5;
+    }
+
+
+    // Check if touching ground
+    if (checkBottomCollision()) {
+        Player.isTouchingGround = true;
+    }
+
+    if (!checkBottomCollision()) {
+        Player.isTouchingGround = false;
     }
 
 
     // Movement
-    if (Player.isMovingUp === true) {
-        Player.position.y += Player.movementSpeed;
-    }
-
     if (Player.isMovingDown === true) {
         Player.position.y -= Player.movementSpeed;
     }
@@ -34,13 +47,13 @@ export default function physicsEngine() {
     }
 }
 
-export function checkBottomCollision() {
+function checkBottomCollision() {
     let playerBottom = Player.position.y - (Player.size.y / 2);
     origin = new THREE.Vector3(Player.position.x, playerBottom, 0);
 
     let raycaster = new THREE.Raycaster(origin, vectorDown, 0, 16);
 
-    let intersectsList = raycaster.intersectObjects(scene.children);
+    let intersectsList = raycaster.intersectObjects(Game.scene.children);
 
     for (let i = 0; i < intersectsList.length; i++) {
         if (intersectsList[i].object.name.split('_')[0] !== 'bg') {
@@ -57,17 +70,17 @@ export function checkBottomCollision() {
     return true;
 }
 
-export function checkTopCollisions() {
+function checkTopCollisions() {
 
 }
 
-export function checkLeftCollisions() {
+function checkLeftCollisions() {
     let playerLeft = Player.position.x - (Player.size.x / 2);
     origin = new THREE.Vector3(playerLeft, Player.position.y, 0);
 
     let raycaster = new THREE.Raycaster(origin, vectorDown, 0, 16);
 
-    let intersectsList = raycaster.intersectObjects(scene.children);
+    let intersectsList = raycaster.intersectObjects(Game.scene.children);
 
     for (let i = 0; i < intersectsList.length; i++) {
         if (intersectsList[i].object.name.split('_')[0] !== 'bg') {
@@ -80,13 +93,13 @@ export function checkLeftCollisions() {
    return false;
 }
 
-export function checkRightCollisions() {
+function checkRightCollisions() {
     let playerRight = Player.position.x + (Player.size.x / 2);
     origin = new THREE.Vector3(playerRight, Player.position.y, 0);
 
     let raycaster = new THREE.Raycaster(origin, vectorDown, 0, 16);
 
-    let intersectsList = raycaster.intersectObjects(scene.children);
+    let intersectsList = raycaster.intersectObjects(Game.scene.children);
 
     for (let i = 0; i < intersectsList.length; i++) {
         if (intersectsList[i].object.name.split('_')[0] !== 'bg') {
@@ -98,3 +111,5 @@ export function checkRightCollisions() {
 
     return false;
 }
+
+export default PhysicsEngine;

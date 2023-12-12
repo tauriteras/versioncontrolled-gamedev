@@ -1,7 +1,12 @@
-import { socket } from "./main.js";
-import Player from "./player.js";
+import Player from "./Player.js";
 
-export function sendMessage() {
+let Chat = {
+    sendMessage: sendMessage,
+    getCurrentTime: getCurrentTime,
+    addMessageToChat: addMessageToChat
+}
+
+function sendMessage() {
 	let message = document.getElementById('chat__input__field').value;
 
     let dateString = getCurrentTime();
@@ -10,7 +15,7 @@ export function sendMessage() {
     addMessageToChat(message, dateString, Player.name, 'W');
 }
 
-export function getCurrentTime() {
+function getCurrentTime() {
     let date = new Date();
 
     let hours = date.getHours();
@@ -20,7 +25,7 @@ export function getCurrentTime() {
     return `[${hours}:${minutes}:${seconds}]`;
 }
 
-export function addMessageToChat(message, time, username, type) {
+function addMessageToChat(message, time, username, type) {
     if (message === "") { return; }
     if (time === undefined) { 
         time = getCurrentTime();
@@ -72,3 +77,5 @@ export function addMessageToChat(message, time, username, type) {
   document.getElementById('chat__input__field').value = "";
 
 }
+
+export default Chat;

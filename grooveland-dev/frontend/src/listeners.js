@@ -1,14 +1,12 @@
 import * as THREE from 'three';
-import { scene, socket, camera, mainLoop } from './main.js';
 
-import { addMessageToChat, sendMessage } from './chat.js';
+import Chat from './Chat.js';
 
-import { socketEventHandler } from './socketHandler.js';
+import Player, { initPlayerListeners, createPlayerSprite } from './Player.js';
 
-import initCameraListeners from './camera.js';
-
-import Player, { initPlayerListeners, createPlayerSprite, getEntryTilePosition, respawn } from './player.js';
-import Camera from './camera.js';
+import Game from './main.js';
+import Camera from './Camera.js';
+import World from './world.js';
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
@@ -16,16 +14,10 @@ const pointer = new THREE.Vector2();
 
 
 function initListeners() {
-
-    // Temporary camera movement for development
     document.addEventListener('keydown', (event) => {
         const keyName = event.key.toLowerCase();
         if (keyName === 'enter') {
-            sendMessage();
-        }
-
-        if (keyName === 'r') {
-            respawn();
+            Chat.sendMessage();
         }
     });
 
@@ -40,34 +32,11 @@ function initListeners() {
 
     // -----------------------------------------
 
-    document.addEventListener('login-button-click', (event) => {
-        let accountDetails = event.detail;
-        if (accountDetails.username !== '') {
-            Player.name = accountDetails.username;
-        } else {
-            Player.name = '@dev';
-        }
-
-
-        Player.uniqueID = socket.id;
-        socketEventHandler(socket);
-
-        document.getElementById('login').style.display = 'none';
-
-        initPlayerListeners();
-        Camera.zoomListener();
-
-        getEntryTilePosition();
-
-        createPlayerSprite(Player.uniqueID, Player.position.x, Player.position.y);
-        console.log('Player created', Player.name, Player.uniqueID);
-
-        addMessageToChat(`Joined the game as ${Player.name}`, undefined, Player.name, 'W');
-        
-        mainLoop();
-    });
-
     // -----------------------------------------
+
+    document.addEventListener('pointerdown', (event) => {
+        Player.mouseIsDown = true;
+    });
 
     document.addEventListener('pointermove', (event) => {
 
@@ -78,13 +47,15 @@ function initListeners() {
         pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
     
         // update the picking ray with the camera and pointer position
-        raycaster.setFromCamera(pointer, camera);
+        raycaster.setFromCamera(pointer, Camera.camera);
     
         // calculate objects intersecting the picking ray
-        Player.hoveringOver = raycaster.intersectObjects(scene.children);
+        Player.hoveringOver = raycaster.intersectObjects(Game.scene.children);
     });
 
-    // -----------------------------------------
+    document.addEventListener('pointerup', (event) => {
+        Player.mouseIsDown = false;
+    });
 
 }
 

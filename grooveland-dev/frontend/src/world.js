@@ -1,20 +1,22 @@
 import * as THREE from 'three';
-import { scene, socket } from './main.js';
+import Game from './main.js';
 
 let World = {
     blocks: [],
     backgroundBlocks: [],
-    entryTile: ''
+    entryTile: '',
+
+    load: worldLoader
 }
 
 let audioLoader = new THREE.AudioLoader();
 let listener = new THREE.AudioListener();
 
-export function worldLoader() {
+function worldLoader() {
 
-    socket.emit('request-world');
+    Game.socket.emit('request-world');
 
-    socket.on('send-world', (worldData) => {
+    Game.socket.on('send-world', (worldData) => {
         let flippedBlocksArray = [];
         let flippedBackgroundBlocksArray = [];
 
@@ -34,6 +36,8 @@ export function worldLoader() {
 
         // addAudioListeners();
         loadAudio();
+
+        // getEntryTilePosition();
 	});
 
 
@@ -50,7 +54,7 @@ function loadAudio() {
     });
     punchAudio.name = 'punch_block';
 
-    scene.add(punchAudio)
+    Game.scene.add(punchAudio)
 
 
     stream = './sounds/break_block.wav';
@@ -60,7 +64,7 @@ function loadAudio() {
     });
     breakAudio.name = 'break_block';
 
-    scene.add(breakAudio)
+    Game.scene.add(breakAudio)
 
 
     stream = './sounds/place_block.wav';
@@ -70,7 +74,7 @@ function loadAudio() {
     });
     placeAudio.name = 'place_block';
 
-    scene.add(placeAudio)
+    Game.scene.add(placeAudio)
 
 
     stream = './sounds/sorryno.wav';
@@ -83,7 +87,7 @@ function loadAudio() {
 
     errorAudio.name = 'error_audio';
 
-    scene.add(errorAudio);
+    Game.scene.add(errorAudio);
 
 
     let hitAudio = new THREE.Audio(listener);
@@ -95,7 +99,7 @@ function loadAudio() {
 
     hitAudio.name = 'hit_audio';
 
-    scene.add(hitAudio);
+    Game.scene.add(hitAudio);
 }
 
 
@@ -179,7 +183,7 @@ function generateWorld(blocks) {
 
         tile.renderOrder = 5;
 
-        scene.add(tile);
+        Game.scene.add(tile);
 
         blocknr += 1;
         if (blocknr % 100 === 0) {
@@ -222,7 +226,7 @@ function loadBackgroundTiles(blocks) {
 
         tile.renderOrder = 1;
 
-        scene.add(tile);
+        Game.scene.add(tile);
 
         blocknr += 1;
         if (blocknr % 100 === 0) {
@@ -246,7 +250,7 @@ function loadWeather() {
     weatherMesh.position.y = 450;
     weatherMesh.name = 'weather';
 
-    scene.add(weatherMesh);
+    Game.scene.add(weatherMesh);
 }
 
 export default World;

@@ -1,4 +1,4 @@
-import Player from './player.js';
+import Player from './Player.js';
 import Shop from './shop.js';
 
 export function loadGameUI() {

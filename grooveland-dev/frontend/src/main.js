@@ -1,45 +1,54 @@
 import * as THREE from 'three';
 import WebGL from 'three/addons/capabilities/WebGL.js';
-
 import { io } from 'socket.io-client';
 
-import Camera from './camera.js';
+import Player from './Player.js';
+import PhysicsEngine from './PhysicsEngine.js';
+import SocketEventHandler from './socketHandler.js';
+import Camera from './Camera.js';
+import Chat from './Chat.js';
+import World from './world.js';
 
-import { worldLoader } from './world.js';
-
-import initListeners from './listeners.js';
-
-import physicsEngine from './physics.js';
-import Player, { pickUpItem } from './player.js';
-
-export const scene = new THREE.Scene();
+const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xffffff);
 
-export const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 Camera.camera = camera;
 camera.position.z = Camera.zoom;
 
-export const socket = io('http://localhost:3000');
-
-export const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer();
 renderer.setSize( window.innerWidth, window.innerHeight);
 document.body.appendChild( renderer.domElement );
 
-let connection = false;
+let Game = {
+	socket: io('http://localhost:3000'),
+	scene: scene,
+	clock: new THREE.Clock(),
 
-socket.on('connect', () => {
-	console.log('connected');
-	connection = true;
+	run: mainLoop
+}
+
+Game.socket.on('connect', () => {
+	Chat.addMessageToChat('Connected to server', undefined, '*SERVER*', 'S');
 });
 
-export function mainLoop() {
+
+function mainLoop() {
 
 	Player.sprite.position.x = Player.position.x;
 	Player.sprite.position.y = Player.position.y;
 
-	physicsEngine();
+	PhysicsEngine.update();
 
-	pickUpItem();
+	Player.itemPicker();
+
+	if (Player.mouseIsDown && Player.selectedBlock === -1) {  Player.punch(); }
+
+	if (Player.isMovingDown || Player.isMovingLeft || Player.isMovingRight || Player.isMovingUp) { 
+		
+	}
+
+	Game.socket.emit('player-movement', Player.position.x, Player.position.y);
 
 	Camera.update();
 
@@ -48,13 +57,37 @@ export function mainLoop() {
 	renderer.render(scene, camera);
 }
 
-if (WebGL.isWebGLAvailable()) {
-
-	initListeners();
-
-	worldLoader();
-
-} else {
+if (WebGL.isWebGLAvailable() === false) {
 	const warning = WebGL.getWebGLErrorMessage();
 	document.getElementById('body').appendChild(warning);
+} else {
+	
+    document.addEventListener('login-button-click', (event) => {
+        let accountDetails = event.detail;
+        if (accountDetails.username !== '') {
+            Player.name = accountDetails.username;
+        } else {
+            Player.name = '@dev';
+        }
+
+
+        Player.uniqueID = Game.socket.id;
+        SocketEventHandler.init();
+
+        document.getElementById('login').style.display = 'none';
+
+        Player.initInputListener()
+        Camera.zoomListener();
+
+        World.load();
+
+        Player.createSprite(Player.uniqueID, Player.position.x, Player.position.y);
+
+        Chat.addMessageToChat(`Joined the game as ${Player.name}`, undefined, Player.name, 'W');
+        
+        Game.run();
+    });
+
 }
+
+export default Game;

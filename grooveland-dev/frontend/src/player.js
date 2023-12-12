@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 
+import Game from './main.js';
 import World from './world.js';
 
-import { scene, socket } from './main.js';
 import { updateInventoryItem, loadGameUI } from './ui.js';
 
 let Player = {
@@ -34,11 +34,20 @@ let Player = {
     isMovingDown: false,
     mouseX: 0,
     mouseY: 0,
-    isPunching: false
+    mouseIsDown: false,
+
+    initInputListener: initPlayerListeners,
+    createSprite: createPlayerSprite,
+
+    itemPicker: pickUpItem,
+    respawn: respawn,
+
+    punch: punch,
+    jump: jump,
 }
 
 export function getEntryTilePosition() {
-    let tile = scene.getObjectByName(World.entryTile.name);
+    let tile = Game.scene.getObjectByName(World.entryTile.name);
 
     Player.position.x = tile.position.x;
     Player.position.y = tile.position.y + 4;
@@ -46,8 +55,8 @@ export function getEntryTilePosition() {
     World.entryTile = tile;
 }
 
-export function respawn() {
-    let tile = scene.getObjectByName(World.entryTile.name);
+function respawn() {
+    let tile = Game.scene.getObjectByName(World.entryTile.name);
 
     Player.position.x = tile.position.x;
     Player.position.y = tile.position.y + 4;
@@ -74,7 +83,7 @@ export function createPlayerSprite(idendtifyer, x, y, username = Player.name) {
     loadGameUI();
     createNameTag(username);
 
-    scene.add(playerSprite);
+    Game.scene.add(playerSprite);
     Player.sprite = playerSprite;
 }
 
@@ -83,28 +92,21 @@ function createNameTag(username) {
 }
 
 export function initPlayerListeners() {
-    let canvas = document.querySelector('canvas');
-
     document.addEventListener('keydown', (event) => {
 
         const keyName = event.key.toLowerCase();
 
-        let playerSprite = scene.getObjectByName(Player.uniqueID);
+        let playerSprite = Game.scene.getObjectByName(Player.uniqueID);
 
         if (playerSprite === undefined) { return; }
 
-        if (((keyName === 'w' || keyName === ' '))) {
-            playerSprite.material.map = new THREE.TextureLoader().load('./textures/player/male/player2.png');
-            Player.isMovingUp = true;
+        if (((keyName === 'w' || keyName === ' ') && Player.isTouchingGround)) {
+            Player.jump();
         }
         if (keyName === 'a') {
-            playerSprite.material.map = new THREE.TextureLoader().load('./textures/player/male/player2.png');
-
             Player.isMovingLeft = true;
         }
         if (keyName === 'd') {
-            playerSprite.material.map = new THREE.TextureLoader().load('./textures/player/male/player2.png');
-
             Player.isMovingRight = true;
         }
 
@@ -112,19 +114,13 @@ export function initPlayerListeners() {
             Player.isMovingDown = true;
         }
 
-        socket.emit('player-movement', Player.position.x, Player.position.y);
+        if (keyName === 'r') {
+            Player.respawn();
+        }
     });
 
     document.addEventListener('keyup', (event) => {
-
-        let playerSprite = scene.getObjectByName(Player.uniqueID);
-        if (playerSprite === undefined) { return; }
-
         const keyName = event.key.toLowerCase();
-
-        if (keyName === 'w' || keyName === 'd' || keyName === 'a') {
-            playerSprite.material.map = new THREE.TextureLoader().load('./textures/player/male/player.png');
-        }
 
         if (keyName === ' ' || keyName === 'w') {
             Player.isMovingUp = false;
@@ -143,8 +139,14 @@ export function initPlayerListeners() {
         }
 
     });
+}
 
-    canvas.addEventListener("click", (event) => {
+function jump() {
+    Player.position.y += 24;
+    Player.isTouchingGround = false;
+}
+
+function punch() {
         let hoverArray = Player.hoveringOver;
         let tile;
         let backgroundTile;
@@ -152,7 +154,6 @@ export function initPlayerListeners() {
         if (hoverArray === undefined) return;
 
         for (let i = 0; i < hoverArray.length; i++) {
-            // console.log("hoverarr", hoverArray[i].object.name)
 
             let object = hoverArray[i].object;
 
@@ -172,31 +173,30 @@ export function initPlayerListeners() {
             }
         }
 
-        if (Player.selectedBlock === -1) {
 
             if (tile.name.split('_')[2] === '0') {
                 tile = backgroundTile;
             }
 
-            punch(tile);
-        }
+            hit(tile);
 
-        if (Player.selectedBlock !== -1) {
-            if (tile.name.split('_')[2] === '0') {
-                placeItem(tile);
-            } else {
-                let audio = scene.getObjectByName('error_audio');
-                audio.play();
-            }
-        }
-    });
+
+        // if (Player.selectedBlock !== -1) {
+        //     if (tile.name.split('_')[2] === '0') {
+        //         placeItem(tile);
+        //     } else {
+        //         let audio = Game.scene.getObjectByName('error_audio');
+        //         audio.play();
+        //     }
+        // }
 }
 
 
-export function punch(tile) {
-    let hitSound = scene.getObjectByName('hit_audio');
 
-    let audio = scene.getObjectByName('punch_block');
+function hit(tile) {
+    let hitSound = Game.scene.getObjectByName('hit_audio');
+
+    let audio = Game.scene.getObjectByName('punch_block');
     audio.play();
     
     console.log('punching item', tile.name);
@@ -323,12 +323,12 @@ function breakingOverlay(tile) {
 
 function placeItem(tile) {
     if (Player.inventory.blocks[Player.selectedBlock - 1][1] === 0) {
-        let audio = scene.getObjectByName('error_audio');
+        let audio = Game.scene.getObjectByName('error_audio');
         audio.play();
         return;
     };
 
-    let audio = scene.getObjectByName('place_block');
+    let audio = Game.scene.getObjectByName('place_block');
     audio.play();
 
     Player.inventory.blocks[Player.selectedBlock - 1][1] -= 1;
@@ -376,7 +376,7 @@ function placeItem(tile) {
 }
 
 function breakBlock(tile) {
-    let audio = scene.getObjectByName('break_block');
+    let audio = Game.scene.getObjectByName('break_block');
     audio.play();
 
     tile.material.map = new THREE.TextureLoader().load('./textures/blocks/0.png');
@@ -436,7 +436,7 @@ function spawnSeed(tile) {
         seedMaterial.map = new THREE.TextureLoader().load('./textures/seeds/seed3.png');
     }
 
-    scene.add(seed);
+    Game.scene.add(seed);
 }
 
 function spawBlock(tile) {
@@ -460,11 +460,11 @@ function spawBlock(tile) {
 
     block.name = 'block_' + itemID;
 
-    scene.add(block);
+    Game.scene.add(block);
 }
 
 function breakBackgroundTile(tile) {
-    let audio = scene.getObjectByName('break_block');
+    let audio = Game.scene.getObjectByName('break_block');
     audio.play();
 
     tile.material.map = new THREE.TextureLoader().load('./textures/blocks/0.png');
@@ -496,15 +496,15 @@ function interactItem(tile) {
 
 }
 
-export function pickUpItem() {
-    let playerSprite = scene.getObjectByName(Player.uniqueID);
+function pickUpItem() {
+    let playerSprite = Game.scene.getObjectByName(Player.uniqueID);
 
     let origin = new THREE.Vector3(playerSprite.position.x, playerSprite.position.y, 0);
     let direction = new THREE.Vector3(0, 0, 1);
 
     let raycaster = new THREE.Raycaster(origin, direction, 0, 16);
 
-    let intersectsList = raycaster.intersectObjects(scene.children);
+    let intersectsList = raycaster.intersectObjects(Game.scene.children);
 
     for (let i = 0; i < intersectsList.length; i++) {
         let object = intersectsList[i].object;
@@ -512,7 +512,7 @@ export function pickUpItem() {
         if (object.name.split('_')[0] === 'seed') {
             Player.inventory.seeds[0][1] += 1;
 
-            scene.remove(object);
+            Game.scene.remove(object);
         } else if (object.name.split('_')[0] === 'block') {
 
             Player.inventory.blocks[object.name.split('_')[1] - 1][1] += 1;
@@ -521,7 +521,7 @@ export function pickUpItem() {
 
             updateInventoryItem(object.name.split('_')[1]);
 
-            scene.remove(object);
+            Game.scene.remove(object);
         }
     }
 }

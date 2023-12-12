@@ -1,21 +1,23 @@
-import Player from './player.js';
-import { createPlayerSprite } from './player.js';
+import Player from './Player.js';
+import Game from './main.js';
+import Chat from './Chat.js';
 
-import { scene, camera } from './main.js';
-
-import { addMessageToChat, getCurrentTime } from './chat.js';
+import { createPlayerSprite } from './Player.js';
 
 
 let playerArray = [];
 
+let SocketEventHandler = {
+	init: socketEvents
+};
 
-export function socketEventHandler(socket) {
+function socketEvents() {
 
-	Player.uniqueID = socket.id;
+	Player.uniqueID = Game.socket.id;
 
-	socket.emit('player-join', Player.name, Player.position.x, Player.position.y);
+	Game.socket.emit('player-join', Player.name, Player.position.x, Player.position.y);
 
-	socket.on('current-players', (online) => {	
+	Game.socket.on('current-players', (online) => {	
 		playerArray = online;
 
 		if (playerArray.length > 0) {
@@ -31,26 +33,26 @@ export function socketEventHandler(socket) {
 		}
 	});
 
-	socket.on('player-join', (username, identifyer) => {
+	Game.socket.on('player-join', (username, identifyer) => {
 		playerArray.push(identifyer);
 
 		createPlayerSprite(identifyer);
 
-		addMessageToChat(`${username} joined the game`, getCurrentTime(), '*SERVER*', 'S');
+		Chat.addMessageToChat(`${username} joined the game`, getCurrentTime(), '*SERVER*', 'S');
 	});
 
-	socket.on('zoom', (zoom) => {
+	Game.socket.on('zoom', (zoom) => {
 		camera.position.z += zoom;
 	});
 
-	socket.on('player-movement', (x, y, identifyer) => {
+	Game.socket.on('player-movement', (x, y, identifyer) => {
 		let otherPlayer = scene.getObjectByName(identifyer);
 
 		otherPlayer.position.x = x;
 		otherPlayer.position.y = y;
 	});
 
-	socket.on('player-leave', (id, onlinePlayers, username) => {
+	Game.socket.on('player-leave', (id, onlinePlayers, username) => {
 		let player = scene.getObjectByName(id);
 		scene.remove(player);
 
@@ -59,7 +61,9 @@ export function socketEventHandler(socket) {
 		addMessageToChat(`${username} left the game`, getCurrentTime(), '*SERVER*', 'S');
 	});
 
-	socket.on('message-world', (message, time, username, type) => {
+	Game.socket.on('message-world', (message, time, username, type) => {
 		addMessageToChat(message, time, username, type);
 	});
 };
+
+export default SocketEventHandler;
