@@ -1,4 +1,5 @@
 import Player from "./Player.js";
+import Game from "./main.js";
 
 let Chat = {
     sendMessage: sendMessage,
@@ -11,7 +12,7 @@ function sendMessage() {
 
     let dateString = getCurrentTime();
 
-    socket.emit('message', message, dateString, Player.name, 'W');
+    Game.socket.emit('message', message, dateString, Player.name, 'W');
     addMessageToChat(message, dateString, Player.name, 'W');
 }
 

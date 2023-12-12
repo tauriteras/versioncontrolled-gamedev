@@ -3,65 +3,117 @@
 	<head>
 		<meta charset="utf-8">
 		<title>My first three.js app</title>
+
 		<link rel="stylesheet" href="/styles/index.css">
+		<link rel="stylesheet" href="/styles/login.css">
+		<link rel="stylesheet" href="/styles/gameUI.css">
+		<link rel="stylesheet" href="/styles/pages.css">
 
 		<link rel="preconnect" href="https://fonts.googleapis.com">
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 		<link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
 	</head>
+
 	<body id="body">
+		<div id="ingame__ui__container">
+			<div id="currency" style="display: none;">
+				<div id="currency__data">
+					<p id="currency__amount"></p>
+	
+					<div id="currency__amount__icon">
+						<img src="./textures/assets/currency.png">
+					</div>
+				</div>
+			</div>
+	
+			<div id="chat" style="display: none;">
+				<div id="chat__messages">
+				</div>
+				<div class="chat__input">
+					<input type="text" id="chat__input__field" class="chat__input__text">
+				</div>
+			</div>
 
-		<div id="currency" style="display: none;">
-			<div id="currency__data">
-				<p id="currency__amount"></p>
-
-				<div id="currency__amount__icon">
-					<img src="./textures/assets/currency.png">
+			<div id="backpack" style="display: none;">
+				<div id="punch-toggle"></div>
+				<div id="backpack__items">
 				</div>
 			</div>
 		</div>
 
-		<div id="chat" style="display: none;">
-			<div id="chat__messages">
-			</div>
-			<div class="chat__input">
-				<input type="text" id="chat__input__field" class="chat__input__text">
-			</div>
-		</div>
-
-		<div id="backpack" style="display: none;">
-			<div id="punch-toggle"></div>
-			<div id="backpack__items">
-			</div>
-		</div>
-
-		<div id="login">
-			<div id="login__form">
-				<div class="login__form__input">
-					<label for="login__form__input__username" value="@dev">Username</label>
-					<input type="text" id="login__form__input__username">
+		<div id="pages">
+			<div id="game-page" data-pageNr="0" class="page">
+				<div id="game__container">
 				</div>
-				<div class="login__form__input">
-					<label for="login__form__input__password">Password</label>
-					<input type="password" id="login__form__input__password">
-				</div>
-				<div class="login__form__input">
-					<button
-					onclick="
-						const loginButtonEvent = new CustomEvent('login-button-click', {
+			</div>
+
+			<div id="select-world" data-pageNr="1" class="page">
+				<div id="select-world__container">
+					<label for="select-world__input">World name</label>
+					<input type="text" id="select-world__input">
+					<button id="select-world__submit" onclick="
+						const selectWorldButtonEvent = new CustomEvent('join-world-button-click', {
 							detail: {
-								username: document.getElementById('login__form__input__username').value,
-								password: document.getElementById('login__form__input__password').value
+								worldName: document.getElementById('select-world__input').value
 							}
 						});
+						document.dispatchEvent(selectWorldButtonEvent);
+					">Join world</button>
+				</div>
+			</div>
 
-						document.dispatchEvent(loginButtonEvent);
-						"
-						id="login__form__input__submit">Login</button>
+			<div id="login-page" data-pageNr="2" class="page">
+				<div id="login__form">
+					<div class="login__form__input">
+						<label for="login__form__input__username" value="@dev">Username</label>
+						<input type="text" id="login__form__input__username">
+					</div>
+					<div class="login__form__input">
+						<label for="login__form__input__password">Password</label>
+						<input type="password" id="login__form__input__password">
+					</div>
+					<div class="login__form__input">
+						<button
+						onclick="
+							const loginButtonEvent = new CustomEvent('login-button-click', {
+								detail: {
+									username: document.getElementById('login__form__input__username').value,
+									password: document.getElementById('login__form__input__password').value
+								}
+							});
+	
+							document.dispatchEvent(loginButtonEvent);
+							"
+							id="login__form__input__submit">Login</button>
+					</div>
+				</div>
+			</div>
+
+			<div id="main-menu" data-pageNr="3" class="page">
+				<div id="main-menu__container">
+					<div id="main-menu__buttons">
+						<button id="play" class="main-menu__button" onclick="
+							const playButtonEvent = new CustomEvent('play-button-click', {
+								detail: {
+									clicked: true
+								}
+							});
+							document.dispatchEvent(playButtonEvent);
+							">
+							Play
+						</button>
+						<button id="settings" class="main-menu__button" onclick="
+							const settingsButtonEvent = new CustomEvent('settings-button-click');
+							document.dispatchEvent(settingsButtonEvent);
+						">
+						Settings
+					</button>
+					</div>
 				</div>
 			</div>
 		</div>
 
 		<script type="module" src="./src/main.js"></script>
+
 	</body>
 </html>

@@ -19,7 +19,7 @@ function physicsEngine() {
     // Gravity
     // TODO: Speed up gravity when falling
     if (Player.isMovingUp === false && !checkBottomCollision()) {
-        Player.position.y -= 1.5;
+        Player.position.y -= 1.5 * Game.delta;
     }
 
 
@@ -35,15 +35,15 @@ function physicsEngine() {
 
     // Movement
     if (Player.isMovingDown === true) {
-        Player.position.y -= Player.movementSpeed;
+        Player.position.y -= Player.movementSpeed * Game.delta;
     }
 
     if (Player.isMovingLeft === true && Player.position.x > (Player.size.x / 2) && !checkLeftCollisions()) {
-        Player.position.x -= Player.movementSpeed;
+        Player.position.x -= Player.movementSpeed * Game.delta;
     }
 
     if (Player.isMovingRight === true && Player.position.x < ((16 * 100) - (Player.size.x / 2)) && !checkRightCollisions()) {
-        Player.position.x += Player.movementSpeed;
+        Player.position.x += Player.movementSpeed * Game.delta;
     }
 }
 

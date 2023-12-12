@@ -1,31 +1,21 @@
 import Player from './Player.js';
+import Game from './main.js';
 
 let Camera = {
-	camera: '',
-	zoomListener: initCameraListeners,
-	update: updateCamera,
+	update: updateCamera(),
+	zoomDirection: 0,
+	zoomSpeed: 5,
+	zoomDefault: 90,
 	zoom: 90
 }
 
 function updateCamera() {
-	Camera.camera.position.x = Player.position.x;
-	Camera.camera.position.y = Player.position.y;
-}
-
-function initCameraListeners() {
-	document.addEventListener('keydown', (event) => {
-		
-		const keyName = event.key.toLowerCase();
-
-		if (keyName === 'z' && Camera.camera.position.z < 140) {
-			Camera.camera.position.z += 10;
-		}
-
-		if (keyName === 'x' && Camera.camera.position.z > 50) {
-			Camera.camera.position.z -= 10;
-		}
-	});
+	// Game.camera.position.x = Player.position.x;
+	// Game.camera.position.y = Player.position.y;
 	
+	// while(Player.isZooming) {
+	// 	Camera.zoom == (Camera.zoomDirection * Camera.zoomSpeed) * Game.delta;
+	// }
 }
 
 export default Camera;

@@ -5,6 +5,7 @@ let World = {
     blocks: [],
     backgroundBlocks: [],
     entryTile: '',
+    isReady: false,
 
     load: worldLoader
 }
@@ -13,35 +14,17 @@ let audioLoader = new THREE.AudioLoader();
 let listener = new THREE.AudioListener();
 
 function worldLoader() {
+    console.log('loading world')
 
-    Game.socket.emit('request-world');
+    loadBlocks(World.blocks);
+    loadBackgroundBlocks(World.backgroundBlocks);
 
-    Game.socket.on('send-world', (worldData) => {
-        let flippedBlocksArray = [];
-        let flippedBackgroundBlocksArray = [];
-
-        for (let i = worldData.length; i > 1; i--) {
-            if (worldData[i] !== undefined) {
-                flippedBlocksArray.push(worldData[i][0]);
-                flippedBackgroundBlocksArray.push(worldData[i][1]);
-            }
-        }
-
-        World.blocks = flippedBlocksArray;
-        World.backgroundBlocks = flippedBackgroundBlocksArray;
-
-		generateWorld(flippedBlocksArray);
-        loadBackgroundTiles(flippedBackgroundBlocksArray);
         loadWeather();
-
-        // addAudioListeners();
         loadAudio();
 
-        // getEntryTilePosition();
-	});
+        World.isReady = true;
 
-
-    return;
+        console.log('world loaded')
 }
 
 function loadAudio() {
@@ -103,15 +86,16 @@ function loadAudio() {
 }
 
 
-function generateWorld(blocks) {
+const loadBlocks = (blocks) => {
+
     let blocknr = 0;
-    let rownr = 0;
+    let rownr = 0; 
 
     for (let i = 0; i < blocks.length; i++) {
+
         let block_id = blocks[i];
 
         let canCollide = 1;
-
         let hasUseStates = 0;
         let useState = 0;
         let punchCount = 0;
@@ -167,37 +151,31 @@ function generateWorld(blocks) {
                 break;
         }
 
-        tile.name = 
-            ((blocknr % 100) * 16) + 
-            '_' + rownr + 
-            '_' + block_id + 
-            '_' + canCollide + 
-            '_' + hasUseStates + 
-            '_' + useState + 
-            '_' + punchCount +
-            '_3'; // 8params
+        tile.name = ((blocknr * 16) + 
+        '_' + rownr + 
+        '_' + block_id + 
+        '_' + canCollide + 
+        '_' + hasUseStates + 
+        '_' + useState + 
+        '_' + punchCount +
+        '_3'); // 8params
 
-        tile.position.x = (blocknr % 100) * 16;
-        tile.position.y = (rownr % 56) * 16;
-        tile.position.z = 3;
+            tile.position.x = blocknr * 16;
+            tile.position.y = rownr * 16;
+            tile.position.z = 3;
 
-        tile.renderOrder = 5;
-
-        Game.scene.add(tile);
-
-        blocknr += 1;
-        if (blocknr % 100 === 0) {
-            rownr += 1;
-        }
+            tile.renderOrder = 5;
+            Game.scene.add(tile);
     };
-}
 
-function loadBackgroundTiles(blocks) {
+};
+
+const loadBackgroundBlocks = (bgBlocks) => {
     let blocknr = 0;
     let rownr = 0;
 
-    for (let i = 0; i < blocks.length; i++) {
-        let block_id = blocks[i];
+    for (let i = 0; i < bgBlocks.length; i++) {
+        let block_id = bgBlocks[i];
 
         const geometry = new THREE.PlaneGeometry( 16, 16 );
 
@@ -226,14 +204,15 @@ function loadBackgroundTiles(blocks) {
 
         tile.renderOrder = 1;
 
-        Game.scene.add(tile);
 
         blocknr += 1;
         if (blocknr % 100 === 0) {
             rownr += 1;
         }
+
+        Game.scene.add(tile);
     };
-}
+};
 
 function loadWeather() {
     const geometry = new THREE.PlaneGeometry( 1600, 900 );

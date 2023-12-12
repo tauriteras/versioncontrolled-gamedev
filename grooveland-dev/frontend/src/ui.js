@@ -1,14 +1,35 @@
 import Player from './Player.js';
-import Shop from './shop.js';
+import Shop from './Shop.js';
+import Chat from './Chat.js';
 
-export function loadGameUI() {
+let GameUI = {
+    load: loadGameUI,
+    updateInventoryItem: updateInventoryItem,
+    play: playButtonPressed,
+    settings: settingsButtonPressed
+};
+
+function loadGameUI() {
+    let chat = document.getElementById('chat');
+    chat.addEventListener('keydown', (event) => {
+        const keyName = event.key.toLowerCase();
+        if (keyName === 'enter') {
+            Chat.sendMessage();
+        }
+    });
+
+    chat.addEventListener('keyup', (event) => {
+        let inputField = document.getElementById('chat__input__field');
+        if (inputField.value.length > 500) {
+            inputField.value = inputField.value.substring(0, 500);
+        }
+    });
 
     let currencyContainer = document.getElementById('currency');
     currencyContainer.style.display = 'flex';
 
     currencyContainer.addEventListener('click', function(e) {
         if (Shop.isOpen) { return; }
-
         console.log('open shop');
     });
 
@@ -44,7 +65,7 @@ function loadInventoryItems() {
             let itemID = this.dataset.itemId;
 
             if (itemID === 'punch') {
-                Player.selectedBlock = 0;
+                Player.selectedBlock = -1;
             } else {
                 Player.selectedBlock = parseInt(itemID);
             }
@@ -116,7 +137,7 @@ function loadBlocks(backpack) {
 
 }
 
-export function updateInventoryItem(itemID) {
+function updateInventoryItem(itemID) {
     let selecotor = '[data-item-id="' + itemID + '"]';
 
     let inventoryElement = document.querySelector(selecotor);
@@ -125,3 +146,14 @@ export function updateInventoryItem(itemID) {
 
     inventoryElement.children[1].innerHTML = Player.inventory.blocks[itemID - 1][1].toString();
 }
+
+
+function playButtonPressed() {
+    console.log('play button pressed')
+}
+
+function settingsButtonPressed() {
+    console.log('settings button pressed')
+}
+
+export default GameUI;

@@ -7,90 +7,107 @@ import PhysicsEngine from './PhysicsEngine.js';
 import SocketEventHandler from './socketHandler.js';
 import Camera from './Camera.js';
 import Chat from './Chat.js';
+import GameUI from './UI.js';
+
 import World from './world.js';
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xffffff);
-
-const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-Camera.camera = camera;
-camera.position.z = Camera.zoom;
-
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize( window.innerWidth, window.innerHeight);
-document.body.appendChild( renderer.domElement );
+const clock = new THREE.Clock();
 
 let Game = {
 	socket: io('http://localhost:3000'),
-	scene: scene,
-	clock: new THREE.Clock(),
+	renderer: new THREE.WebGLRenderer(),
+	scene: new THREE.Scene(),
 	delta: 0,
+	camera: new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 ),
 
 	run: mainLoop
 }
 
+Camera.camera = Game.camera;
+Game.camera.position.z = Camera.zoom;
+
+Game.renderer.setSize( window.innerWidth, window.innerHeight);
+
+document.getElementById('game__container').appendChild( Game.renderer.domElement );
+
 Game.socket.on('connect', () => {
+	console.log('connected to server')
+	SocketEventHandler.init();
+
 	Chat.addMessageToChat('Connected to server', undefined, '*SERVER*', 'S');
+
+	console.log('debug__socket', Game.socket.id)
 });
 
-
 function mainLoop() {
-
-	Player.sprite.position.x = Player.position.x;
-	Player.sprite.position.y = Player.position.y;
+	Game.delta = clock.getDelta();
+	// console.log('fps:' + Game.delta * 1000);
 
 	PhysicsEngine.update();
-
 	Player.itemPicker();
-
+	
 	if (Player.mouseIsDown && Player.selectedBlock === -1) {  Player.punch(); }
-
-	if (Player.isMovingDown || Player.isMovingLeft || Player.isMovingRight || Player.isMovingUp) { 
-		
-	}
-
-	Game.socket.emit('player-movement', Player.position.x, Player.position.y);
-
-	Game.delta = Game.clock.getDelta();
-
-	Camera.update();
+	if (Player.mouseIsDown && Player.selectedBlock !== -1) {  Player.place(Player.selectedBlock); }
+	
+	// Camera.update();
 
 	requestAnimationFrame(mainLoop);
 
-	renderer.render(scene, camera);
+	Game.renderer.render(Game.scene, Camera.camera);
+
 }
 
 if (WebGL.isWebGLAvailable() === false) {
 	const warning = WebGL.getWebGLErrorMessage();
 	document.getElementById('body').appendChild(warning);
 } else {
-	
-    document.addEventListener('login-button-click', (event) => {
-        let accountDetails = event.detail;
-        if (accountDetails.username !== '') {
-            Player.name = accountDetails.username;
-        } else {
-            Player.name = '@dev';
-        }
 
+	Game.run();
 
-        Player.uniqueID = Game.socket.id;
-        SocketEventHandler.init();
+	document.addEventListener('play-button-click', (event) => {
+		let pagesElem = document.getElementById('pages');
+		pagesElem.classList.add('animate-main-menu-left');
 
-        document.getElementById('login').style.display = 'none';
+		console.log('play-button-click');
 
-        Player.initInputListener()
-        Camera.zoomListener();
+		Game.socket.emit('request-world');
 
-        World.load();
+		document.addEventListener('login-button-click', (event) => {
+			console.log('login-button-click');
 
-        Player.createSprite(Player.uniqueID, Player.position.x, Player.position.y);
+			let pagesElem = document.getElementById('pages');
+			pagesElem.classList.add('move-login-page-right');
 
-        Chat.addMessageToChat(`Joined the game as ${Player.name}`, undefined, Player.name, 'W');
-        
-        Game.run();
-    });
+			let accountDetails = event.detail;
+			if (accountDetails.username !== '') {
+				Player.name = accountDetails.username;
+			} else {
+				Player.name = '@dev';
+			}
+
+			document.addEventListener('join-world-button-click', (event) => {
+
+						World.load();
+
+						let pagesElem = document.getElementById('pages');
+						pagesElem.classList.add('join-world-animate-right');
+		
+						let canvasElements = document.getElementsByTagName('canvas');
+						let canvas = canvasElements[0];
+						canvas.classList.add('animate-canvas-in');
+		
+						Game.socket.emit('player-join', Player.name);
+			
+						GameUI.load();
+						
+						Player.createSprite(Player.uniqueID);
+						Player.initInputListener();
+			});
+		});
+
+	});
 
 }
+
 
 export default Game;

@@ -1,9 +1,12 @@
 import * as THREE from 'three';
 
 import Game from './main.js';
+import Camera from './Camera.js';
 import World from './world.js';
+import GameUI from './UI.js';
 
-import { updateInventoryItem, loadGameUI } from './ui.js';
+const pointer = new THREE.Vector2();
+const raycaster = new THREE.Raycaster();
 
 let Player = {
     name: '',
@@ -22,11 +25,11 @@ let Player = {
         backgroundTiles: [[7, 10]],
         seeds: [[8, 10], [9, 10], [10, 10]]
     },
-    sprite: '',
     currency: 99999,
     selectedBlock: -1,
     hoveringOver: '',
-    movementSpeed: 2,
+    movementSpeed: 30,
+    inMotion: false,
     isTouchingGround: true,
     isMovingLeft: false,
     isMovingRight: false,
@@ -35,6 +38,10 @@ let Player = {
     mouseX: 0,
     mouseY: 0,
     mouseIsDown: false,
+    isZooming: false,
+
+    createSprite: createPlayerSprite,
+    sprite: '',
 
     initInputListener: initPlayerListeners,
     createSprite: createPlayerSprite,
@@ -43,16 +50,8 @@ let Player = {
     respawn: respawn,
 
     punch: punch,
+    place: place,
     jump: jump,
-}
-
-export function getEntryTilePosition() {
-    let tile = Game.scene.getObjectByName(World.entryTile.name);
-
-    Player.position.x = tile.position.x;
-    Player.position.y = tile.position.y + 4;
-
-    World.entryTile = tile;
 }
 
 function respawn() {
@@ -63,7 +62,7 @@ function respawn() {
 
 }
 
-export function createPlayerSprite(idendtifyer, x, y, username = Player.name) {
+function createPlayerSprite(identifyer) {
     let playerGeometry = new THREE.PlaneGeometry( Player.size.x , Player.size.y );
     let playerMaterial = new THREE.MeshBasicMaterial( { 
         map: new THREE.TextureLoader().load('./textures/player/male/player.png'), 
@@ -73,22 +72,19 @@ export function createPlayerSprite(idendtifyer, x, y, username = Player.name) {
 
     let playerSprite = new THREE.Mesh( playerGeometry, playerMaterial );
 
-    playerSprite.name = idendtifyer;
-	playerSprite.position.x = x;
-	playerSprite.position.y = y;
+    playerSprite.name = identifyer;
+    console.log('cgar1')
+	playerSprite.position.x = World.entryTile.x;
+	playerSprite.position.y = World.entryTile.y;;
     playerSprite.position.z = Player.position.z;
 
     playerSprite.renderOrder = 100;
 
-    loadGameUI();
-    createNameTag(username);
+    if (identifyer === Player.uniqueID) {
+        Player.sprite = playerSprite;
+    }
 
     Game.scene.add(playerSprite);
-    Player.sprite = playerSprite;
-}
-
-function createNameTag(username) {
-
 }
 
 export function initPlayerListeners() {
@@ -96,27 +92,40 @@ export function initPlayerListeners() {
 
         const keyName = event.key.toLowerCase();
 
-        let playerSprite = Game.scene.getObjectByName(Player.uniqueID);
-
-        if (playerSprite === undefined) { return; }
-
         if (((keyName === 'w' || keyName === ' ') && Player.isTouchingGround)) {
             Player.jump();
         }
         if (keyName === 'a') {
+
             Player.isMovingLeft = true;
         }
         if (keyName === 'd') {
+
             Player.isMovingRight = true;
         }
 
         if (keyName === 's' && Player.position.y > -448 + 24) {
+
             Player.isMovingDown = true;
         }
 
         if (keyName === 'r') {
             Player.respawn();
         }
+
+
+		if (keyName === 'z' && Camera.camera.zoom < 140) {
+            Player.isZooming = true;
+            Camera.zoomDirection == '1';
+
+
+            console.log('zooming out')
+		}
+
+		if (keyName === 'x' && Camera.camera.zoom > 50) {
+            Player.isZooming = true;
+            Camera.zoomDirection == '-1';
+		}
     });
 
     document.addEventListener('keyup', (event) => {
@@ -138,6 +147,40 @@ export function initPlayerListeners() {
             Player.isMovingDown = false;
         }
 
+        if (keyName === 'z') {
+            Player.isZooming = false;
+            Camera.zoomDirection == '0';
+
+		}
+
+		if (keyName === 'x') {
+            Player.isZooming = false;
+            Camera.zoomDirection == '0';
+		}
+
+    });
+
+    document.addEventListener('pointerup', (event) => {
+        Player.mouseIsDown = false;
+    });
+
+    document.addEventListener('pointerdown', (event) => {
+        Player.mouseIsDown = true;
+    });
+
+    document.addEventListener('pointermove', (event) => {
+
+        Player.mouseX = event.clientX;
+        Player.mouseY = event.clientY;
+
+        pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+        pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    
+        // update the picking ray with the camera and pointer position
+        raycaster.setFromCamera(pointer, Camera.camera);
+    
+        // calculate objects intersecting the picking ray
+        Player.hoveringOver = raycaster.intersectObjects(Game.scene.children);
     });
 }
 
@@ -151,12 +194,18 @@ function punch() {
         let tile;
         let backgroundTile;
 
-        if (hoverArray === undefined) return;
+        let audio = Game.scene.getObjectByName('punch_block');
+        if (!audio.isPlaying) { audio.play(); }
+
+
+        if (hoverArray === undefined) { return; }
 
         for (let i = 0; i < hoverArray.length; i++) {
 
             let object = hoverArray[i].object;
 
+            if (object.name === undefined) { return; }
+        
             if (object != undefined 
                 && object.name != 'overlay'
                  && object.name != 'weather' 
@@ -168,17 +217,24 @@ function punch() {
                 tile = object;
             }
 
-            if (object != undefined && object.name != 'weather' && object.name != 'solid_tilemap' && object.name != Player.uniqueID && object.name.split('_')[0] == 'bg') {
+            if (object != undefined 
+                && object.name != 'weather' 
+                && object.name != 'solid_tilemap' 
+                && object.name != Player.uniqueID 
+                && object.name.split('_')[0] == 'bg') {
+
                 backgroundTile = object;
+
             }
         }
 
+        if (tile === undefined && backgroundTile !== undefined) {
+            tile = backgroundTile;
+        }
 
-            if (tile.name.split('_')[2] === '0') {
-                tile = backgroundTile;
-            }
+        if (tile === undefined) return;
 
-            hit(tile);
+        hit(tile);
 
 
         // if (Player.selectedBlock !== -1) {
@@ -200,8 +256,6 @@ function hit(tile) {
     audio.play();
     
     console.log('punching item', tile.name);
-
-    console.log(parseInt(tile.name.split('_')[6]), parseInt(tile.name.split('_')[7]));
 
     if (tile.name.split('_')[4] === '1') {
         let hitCount = parseInt(tile.name.split('_')[6]);
@@ -321,8 +375,36 @@ function breakingOverlay(tile) {
     }
 }
 
-function placeItem(tile) {
-    if (Player.inventory.blocks[Player.selectedBlock - 1][1] === 0) {
+function place() {
+    
+    let hoverArray = Player.hoveringOver;
+    let tile;
+    let backgroundTile;
+
+    if (hoverArray === undefined) return;
+
+    for (let i = 0; i < hoverArray.length; i++) {
+
+        let object = hoverArray[i].object;
+
+        if (object != undefined 
+            && object.name != 'overlay'
+             && object.name != 'weather' 
+             && object.name != 'solid_tilemap' 
+             && object.name != Player.uniqueID
+             && object.name.split('_')[2] != Player.selectedBlock
+             && object.name.split('_')[0] != 'bg'
+             && object.name.split('_')[0] != 'block'
+             && object.name.split('_')[0] != 'seed') {
+            tile = object;
+        }
+
+        if (object != undefined && object.name != 'weather' && object.name != 'solid_tilemap' && object.name != Player.uniqueID && object.name.split('_')[0] == 'bg') {
+            backgroundTile = object;
+        }
+    }
+
+    if (Player.inventory.blocks[Player.selectedBlock - 1][1] === 0 || tile === undefined) {
         let audio = Game.scene.getObjectByName('error_audio');
         audio.play();
         return;
@@ -372,7 +454,7 @@ function placeItem(tile) {
 
     console.log('placed in tile', tile.name)
 
-    updateInventoryItem(Player.selectedBlock);
+    GameUI.updateInventoryItem(Player.selectedBlock);
 }
 
 function breakBlock(tile) {
